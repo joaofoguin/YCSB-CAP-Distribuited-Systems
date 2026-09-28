@@ -1,21 +1,24 @@
-﻿# Configuração do ambiente YCSB + Cassandra
+# Configuração do ambiente YCSB + Cassandra
 
 ## 1. Objetivo
 
-Este documento registra a configuração realizada para executar experimentos
-do YCSB sobre um cluster Cassandra 0.7.0 no Windows 11.
+Este documento registra a configuração e os resultados finais do experimento realizado com o YCSB sobre um cluster Apache Cassandra 0.7.0 no Windows 11.
 
-O experimento tem como objetivo analisar o comportamento do sistema distribuído
-sob diferentes níveis de consistência, em condições normais, durante falha de um nó
-e após a recuperação do cluster.
+O experimento teve como objetivo observar, de forma prática, o comportamento de disponibilidade e dos diferentes requisitos de consistência do Cassandra em três situações:
 
-Os níveis de consistência que serão utilizados são:
+1. operação normal do cluster;
+2. indisponibilidade de um dos três nós;
+3. recuperação do nó indisponível.
+
+Foram utilizados os níveis de consistência:
 
 - ONE
 - QUORUM
 - ALL
 
-O YCSB será utilizado como gerador de carga e ferramenta de benchmark.
+O YCSB foi utilizado como gerador de carga e ferramenta de benchmark.
+
+> **Observação sobre CAP:** ONE, QUORUM e ALL são níveis de consistência configuráveis do Cassandra e não representam, individualmente, os três elementos do CAP. O experimento relaciona os resultados observados aos conceitos de consistência e disponibilidade durante a indisponibilidade de um nó. Ele não constitui, isoladamente, uma prova do teorema CAP nem deve ser usado para atribuir uma classificação absoluta ao Cassandra.
 
 ---
 
@@ -23,7 +26,7 @@ O YCSB será utilizado como gerador de carga e ferramenta de benchmark.
 
 ## Sistema operacional
 
-Windows 11
+Windows 11.
 
 ## Java utilizado pelo YCSB
 
@@ -31,274 +34,252 @@ Java 17:
 
 ```text
 C:\Program Files\Java\jdk-17
+```
 
 Versão utilizada:
 
+```text
 17.0.12
-Java utilizado pelo Cassandra
+```
 
-O Cassandra 0.7.0 não é compatível com Java 17 devido às opções antigas da
-JVM, como:
+## Java utilizado pelo Cassandra
 
+O Cassandra 0.7.0 não é compatível com Java 17 devido ao uso de opções antigas da JVM, como:
+
+```text
 -XX:+UseParNewGC
+```
 
-Por isso, foi instalado o Java 7:
+Por isso, foi utilizado Java 7:
 
+```text
 C:\Program Files\Java\jdk1.7.0_80
+```
 
 Versão:
 
+```text
 1.7.0_80
-Regra importante
+```
 
-Java 17 é utilizado para compilação e execução do YCSB.
+### Regra de execução
 
-Java 7 é utilizado para executar o Cassandra 0.7.0 e suas ferramentas.
+- **Java 17:** compilação e execução do YCSB.
+- **Java 7:** execução do Cassandra 0.7.0 e de suas ferramentas.
 
-3. Maven
+---
+
+# 3. Maven
 
 Foi utilizado o Maven 3.3.9:
 
+```text
 C:\Users\joaop\Tools\apache-maven-3.3.9
+```
 
-Variáveis utilizadas:
+Variáveis utilizadas para compilação do YCSB:
 
+```powershell
 $env:JAVA_HOME="C:\Program Files\Java\jdk-17"
 $env:MAVEN_HOME="$env:USERPROFILE\Tools\apache-maven-3.3.9"
 $env:Path="$env:MAVEN_HOME\bin;$env:Path"
-4. YCSB
+```
 
-Repositório utilizado:
+---
 
+# 4. YCSB
+
+Foi utilizado o YCSB 0.1.4.
+
+Repositório de origem:
+
+```text
 https://github.com/rgcoelho01/YCSB
+```
 
-Versão encontrada no projeto:
+Diretório local utilizado durante a configuração:
 
-YCSB 0.1.4
-
-Diretório local:
-
+```text
 C:\Users\joaop\Documents\Code\Distribuited Systems\YCSB\YCSB
+```
 
 O projeto original utiliza configurações antigas de Java.
 
-No arquivo:
+No arquivo `pom.xml`, foram alterados:
 
-pom.xml
-
-foram alterados:
-
+```xml
 <source>1.6</source>
 <target>1.6</target>
+```
 
 para:
 
+```xml
 <source>7</source>
 <target>7</target>
+```
 
-Essa alteração foi necessária para permitir a compilação do projeto com
-Java 17 e não altera a lógica do YCSB.
+Essa alteração foi necessária para permitir a compilação do projeto no ambiente atual e não altera a lógica do YCSB.
 
-5. Compilação do YCSB
+---
 
-Com Java 17 configurado:
+# 5. Compilação do YCSB
 
-$env:JAVA_HOME="C:\Program Files\Java\jdk-17"
-$env:MAVEN_HOME="$env:USERPROFILE\Tools\apache-maven-3.3.9"
-$env:Path="$env:MAVEN_HOME\bin;$env:Path"
+Com Java 17 configurado, foi utilizado:
 
-O projeto foi compilado com:
-
+```powershell
 mvn -pl cassandra -am package -DskipTests
+```
 
-Foram gerados, entre outros:
+Entre os artefatos gerados estão:
 
+```text
 cassandra\target\cassandra-binding-0.1.4.jar
 core\target\core-0.1.4.jar
-6. Cassandra
+```
+
+Os testes foram executados diretamente pelos JARs compilados, sem depender do script `bin\ycsb`.
+
+Comando-base:
+
+```powershell
+java -cp ".\core\target\core-0.1.4.jar;.\cassandra\target\cassandra-binding-0.1.4.jar" com.yahoo.ycsb.Client
+```
+
+---
+
+# 6. Cassandra
 
 Foi utilizado:
 
+```text
 Apache Cassandra 0.7.0
+```
 
 Diretório:
 
+```text
 C:\Users\joaop\Tools\apache-cassandra-0.7.0
+```
 
-A versão 0.7.0 foi escolhida porque é compatível com o binding Cassandra
-existente no YCSB 0.1.4.
+A versão 0.7.0 foi utilizada por ser compatível com o binding Cassandra existente no YCSB 0.1.4.
 
-7. Configuração inicial do Cassandra
+---
+
+# 7. Configuração inicial do Cassandra
 
 Foi criada uma cópia do arquivo original:
 
+```text
 conf\cassandra.yaml.original
+```
 
-Os diretórios de armazenamento foram alterados para caminhos locais do
-Windows.
+Os diretórios de armazenamento foram configurados para caminhos locais do Windows:
 
-A configuração inicial utilizou:
-
+```yaml
 data_file_directories:
     - C:/Users/joaop/Tools/apache-cassandra-0.7.0/data
 
 commitlog_directory: C:/Users/joaop/Tools/apache-cassandra-0.7.0/commitlog
 
 saved_caches_directory: C:/Users/joaop/Tools/apache-cassandra-0.7.0/saved_caches
+```
 
-Foram criados os diretórios:
+Também foram criados os diretórios necessários para armazenamento.
 
-data
-commitlog
-saved_caches
-8. Java 7 para o Cassandra
+---
 
-Antes de executar o Cassandra:
-
-$env:JAVA_HOME="C:\Program Files\Java\jdk1.7.0_80"
-$env:Path="$env:JAVA_HOME\bin;$env:Path"
-
-A versão pode ser verificada com:
-
-java -version
-
-Resultado esperado:
-
-java version "1.7.0_80"
-9. Cluster com três nós
+# 8. Cluster com três nós
 
 Foi criado um cluster com três nós na mesma máquina.
 
 Foram utilizados diferentes endereços da interface de loopback:
 
-Node 1 = 127.0.0.1
-Node 2 = 127.0.0.2
-Node 3 = 127.0.0.3
+| Nó | Endereço |
+| --- | --- |
+| Node 1 | 127.0.0.1 |
+| Node 2 | 127.0.0.2 |
+| Node 3 | 127.0.0.3 |
 
-Cada nó utiliza as mesmas portas Cassandra porque os endereços IP são
-diferentes.
+Cada nó utiliza as mesmas portas Cassandra, pois os endereços IP são diferentes.
 
-Node 1
-IP: 127.0.0.1
-Storage: 7000
-Thrift: 9160
-JMX: 8080
+| Nó | Storage | Thrift | JMX |
+| --- | ---: | ---: | ---: |
+| Node 1 | 7000 | 9160 | 8080 |
+| Node 2 | 7000 | 9160 | 8081 |
+| Node 3 | 7000 | 9160 | 8082 |
 
-Token:
+Tokens utilizados:
 
+### Node 1
+
+```text
 162422213806482004240197338899574603198
+```
 
-Arquivo:
+### Node 2
 
-conf\cassandra-node1.yaml
-Node 2
-IP: 127.0.0.2
-Storage: 7000
-Thrift: 9160
-JMX: 8081
-
-Token:
-
+```text
 -56713727820156410577229101238628035243
+```
 
-Arquivo:
+### Node 3
 
-conf\cassandra-node2.yaml
+```text
+56713727820156410577229101238628035242
+```
 
-Diretório de configuração utilizado pelo processo:
+---
 
+# 9. Seeds
+
+Os três nós utilizam o Node 1 como seed:
+
+```yaml
+seeds: "127.0.0.1"
+```
+
+---
+
+# 10. Scripts personalizados
+
+Para executar múltiplas instâncias do Cassandra 0.7.0 na mesma instalação, foram criados:
+
+```text
+bin\cassandra-node2.bat
+bin\cassandra-node3.bat
+```
+
+O Node 2 utiliza JMX 8081 e o Node 3 utiliza JMX 8082.
+
+Os scripts também definem o diretório de configuração correspondente:
+
+```text
 conf-node2
+conf-node3
+```
 
-Arquivo efetivo:
+Os dados dos nós são mantidos separadamente em:
 
-conf-node2\cassandra.yaml
-
-Dados:
+```text
+node1\data
+node1\commitlog
+node1\saved_caches
 
 node2\data
 node2\commitlog
 node2\saved_caches
-Node 3
-IP: 127.0.0.3
-Storage: 7000
-Thrift: 9160
-JMX: 8082
-
-Token:
-
-56713727820156410577229101238628035242
-
-Arquivo:
-
-conf\cassandra-node3.yaml
-
-Diretório de configuração:
-
-conf-node3
-
-Arquivo efetivo:
-
-conf-node3\cassandra.yaml
-
-Dados:
 
 node3\data
 node3\commitlog
 node3\saved_caches
-10. Seeds
+```
 
-Os três nós utilizam o Node 1 como seed:
+---
 
-seeds: "127.0.0.1"
-11. Scripts personalizados
-
-O Cassandra 0.7.0 possui scripts antigos que dificultam executar várias
-instâncias na mesma instalação.
-
-O arquivo original:
-
-bin\cassandra.bat
-
-possui o JMX fixado em:
-
--Dcom.sun.management.jmxremote.port=8080
-
-Por isso foram criados scripts específicos:
-
-bin\cassandra-node2.bat
-bin\cassandra-node3.bat
-
-O Node 2 utiliza:
-
-JMX = 8081
-
-O Node 3 utiliza:
-
-JMX = 8082
-
-Além disso, os scripts definem o diretório de configuração correspondente.
-
-Node 2:
-
-set CASSANDRA_CONF=%CASSANDRA_HOME%\conf-node2
-
-Node 3:
-
-set CASSANDRA_CONF=%CASSANDRA_HOME%\conf-node3
-
-O classpath também foi alterado para utilizar o diretório de configuração
-correspondente:
-
-set CLASSPATH=%CASSANDRA_CONF%
-
-Essa alteração foi necessária porque o cassandra.bat original força:
-
-set CLASSPATH=%CASSANDRA_HOME%\conf
-## 12. Inicialização dos nós
+# 11. Inicialização dos nós
 
 ### Node 1
-
-Utilizando Java 7:
 
 ```powershell
 cd "C:\Users\joaop\Tools\apache-cassandra-0.7.0"
@@ -331,76 +312,19 @@ $env:Path="$env:JAVA_HOME\bin;$env:Path"
 .\bin\cassandra-node3.bat -f
 ```
 
-Os três processos devem permanecer executando.
-
 ---
 
-## 13. Verificação das portas
+# 12. Verificação do cluster
 
-Foi utilizada:
+A conectividade das portas foi verificada com `Test-NetConnection`.
 
-```powershell
-Get-NetTCPConnection -State Listen |
-Where-Object {$_.LocalPort -in 7000,9160,8080,8081,8082} |
-Sort-Object LocalPort,LocalAddress |
-Select-Object LocalAddress,LocalPort,OwningProcess
-```
-
-Resultado obtido:
-
-```text
-127.0.0.1   7000   Node 1
-127.0.0.2   7000   Node 2
-127.0.0.3   7000   Node 3
-
-127.0.0.1   9160   Node 1
-127.0.0.2   9160   Node 2
-127.0.0.3   9160   Node 3
-
-8080         Node 1
-8081         Node 2
-8082         Node 3
-```
-
----
-
-## 14. Teste de conectividade
-
-Foi utilizada a ferramenta:
-
-```powershell
-Test-NetConnection
-```
-
-Exemplo:
-
-```powershell
-Test-NetConnection 127.0.0.2 -Port 7000
-```
-
-e:
-
-```powershell
-Test-NetConnection 127.0.0.3 -Port 7000
-```
-
-Todos os nós apresentaram:
-
-```text
-TcpTestSucceeded : True
-```
-
----
-
-## 15. Confirmação do cluster
-
-A confirmação efetiva do cluster foi realizada através do:
+A confirmação da participação dos três nós no mesmo anel foi realizada com:
 
 ```powershell
 .\bin\nodetool.bat -h 127.0.0.1 ring
 ```
 
-Resultado:
+Resultado observado:
 
 ```text
 127.0.0.2   Up   Normal
@@ -408,59 +332,31 @@ Resultado:
 127.0.0.1   Up   Normal
 ```
 
-Portanto, os três nós estão:
+Portanto, os três nós estavam:
 
-- Up
-- Normal
-- Participando do mesmo anel Cassandra.
+- Up;
+- Normal;
+- participando do mesmo anel Cassandra.
 
 ---
 
-## 16. Criação da keyspace
+# 13. Keyspace e Column Family
 
-Inicialmente foi criada:
-
-```text
-Keyspace1
-```
-
-com:
-
-```text
-replication_factor=1
-```
-
-Entretanto, o YCSB utiliza por padrão a keyspace:
+O YCSB utiliza por padrão a keyspace:
 
 ```text
 usertable
 ```
 
-Isso foi identificado através dos erros apresentados pelo YCSB.
+Por isso, foi criada a keyspace utilizada efetivamente pelo benchmark.
 
-Por isso, foi criada a keyspace utilizada efetivamente pelo benchmark:
-
-```text
-usertable
-```
-
----
-
-## 17. Column Family
-
-Dentro da keyspace `usertable` foi criada:
+Dentro dela foi criada a Column Family:
 
 ```text
 Standard1
 ```
 
-com:
-
-```text
-comparator='UTF8Type'
-```
-
-Estrutura utilizada pelo YCSB:
+Estrutura:
 
 ```text
 usertable
@@ -469,27 +365,35 @@ usertable
 
 ---
 
-## 18. Replicação
+# 14. Fator de replicação
 
-Após a criação do cluster de três nós, o fator de replicação da keyspace `usertable` foi alterado para:
+O cluster foi configurado para trabalhar com:
 
 ```text
-replication_factor=3
+Replication Factor (RF) = 3
 ```
 
-Comando utilizado no Cassandra CLI:
+Comando utilizado:
 
 ```text
 update keyspace usertable with replication_factor=3;
 ```
 
-A alteração foi aceita pelo Cassandra.
+A configuração foi verificada com:
 
-Após a alteração do fator de replicação, os dados foram carregados novamente pelo YCSB para que os experimentos principais fossem realizados com fator de replicação 3.
+```text
+describe keyspace usertable;
+```
+
+A keyspace apresentou fator de replicação 3.
+
+Após a configuração do RF=3, os dados utilizados nos experimentos principais foram carregados novamente pelo YCSB.
+
+> Alterar o fator de replicação não significa, por si só, que dados antigos sejam imediatamente redistribuídos. Por isso, a carga utilizada nos experimentos principais foi realizada após a configuração do RF=3.
 
 ---
 
-## 19. Binding Cassandra utilizado pelo YCSB
+# 15. Binding Cassandra utilizado pelo YCSB
 
 Foi utilizado:
 
@@ -497,7 +401,7 @@ Foi utilizado:
 com.yahoo.ycsb.db.CassandraClient10
 ```
 
-O `CassandraClient10` permite configurar os níveis de consistência através das propriedades:
+O binding permite configurar os níveis de consistência através das propriedades:
 
 ```text
 cassandra.readconsistencylevel
@@ -506,222 +410,321 @@ cassandra.scanconsistencylevel
 cassandra.deleteconsistencylevel
 ```
 
-O host é informado através de:
+O host utilizado nos testes foi:
 
 ```text
-hosts
+127.0.0.1
 ```
-
-O YCSB seleciona aleatoriamente um dos hosts informados.
 
 ---
 
-## 20. Níveis de consistência
+# 16. Workload utilizado
 
-Os testes planejados utilizarão:
-
-- ONE
-- QUORUM
-- ALL
-
-Esses valores representam níveis de consistência do Cassandra.
-
-Eles não devem ser tratados como três modelos CAP diferentes.
-
-O objetivo é observar experimentalmente como diferentes níveis de consistência afetam:
-
-- throughput;
-- latência;
-- erros;
-- disponibilidade;
-- comportamento durante falhas/partições;
-- recuperação.
-
----
-
-## 21. Primeiro teste do YCSB
-
-O YCSB foi executado diretamente através dos JARs compilados:
-
-```powershell
-java -cp ".\core\target\core-0.1.4.jar;.\cassandra\target\cassandra-binding-0.1.4.jar" com.yahoo.ycsb.Client
-```
-
-Workload utilizado:
+Foi utilizado o Workload A do YCSB:
 
 ```text
 workloads\workloada
 ```
 
-Configuração principal:
+Configuração:
 
 ```text
 recordcount=1000
 operationcount=1000
 readproportion=0.5
 updateproportion=0.5
+scanproportion=0
+insertproportion=0
+requestdistribution=zipfian
 ```
+
+Portanto:
+
+- 1000 registros;
+- 1000 operações;
+- 50% de leituras;
+- 50% de atualizações;
+- distribuição Zipfian;
+- sem operações de scan;
+- sem inserções durante a carga do benchmark.
 
 ---
 
-## 22. Teste inicial de carga
+# 17. Níveis de consistência avaliados
 
-Comando:
-
-```powershell
-java -cp ".\core\target\core-0.1.4.jar;.\cassandra\target\cassandra-binding-0.1.4.jar" com.yahoo.ycsb.Client -db com.yahoo.ycsb.db.CassandraClient10 -P ".\workloads\workloada" -p hosts=127.0.0.1 -p cassandra.columnfamily=Standard1 -p cassandra.writeconsistencylevel=ONE -load *> ycsb-load.log
-```
-
-Resultado:
-
-```text
-Throughput: 2645.50 ops/sec
-```
-
----
-
-## 23. Baseline com um nó
-
-Antes da configuração definitiva do cluster, foram realizados testes com apenas um nó.
+Foram avaliados:
 
 ### ONE
 
-```text
-Runtime: 322 ms
-Throughput: 3105.59 ops/sec
-Errors: 0
-```
+A operação precisa ser confirmada por uma réplica.
 
 ### QUORUM
 
+A operação precisa ser confirmada por uma maioria das réplicas.
+
+Com RF=3:
+
 ```text
-Runtime: 334 ms
-Throughput: 2994.01 ops/sec
-Errors: 0
+QUORUM = 2 réplicas
 ```
 
 ### ALL
 
+A operação precisa ser confirmada por todas as réplicas.
+
+Com RF=3:
+
 ```text
-Runtime: 268 ms
-Throughput: 3731.34 ops/sec
-Errors: 0
+ALL = 3 réplicas
 ```
 
-Esses valores são apenas uma linha de base inicial.
-
-Não devem ser utilizados isoladamente para concluir que um determinado nível de consistência é sempre mais rápido.
-
-Os testes do experimento principal serão realizados posteriormente com o cluster de três nós.
+Esses níveis não representam três modelos CAP diferentes. Eles permitem observar diferentes requisitos de consistência e seus efeitos sobre a disponibilidade durante a indisponibilidade de um nó.
 
 ---
 
-## 24. Resultados experimentais
+# 18. Automação do benchmark
 
-Os experimentos principais foram realizados com:
+Foi criado o script:
 
-- cluster Cassandra com 3 nós;
-- fator de replicação (RF) igual a 3;
-- workload A do YCSB;
+```text
+benchmark.ps1
+```
+
+O script permite executar:
+
+```powershell
+.\benchmark.ps1 normal
+```
+
+ou:
+
+```powershell
+.\benchmark.ps1 falha
+```
+
+Para cada cenário, são executados automaticamente:
+
+- ONE;
+- QUORUM;
+- ALL.
+
+O script utiliza um limite de 30 segundos por execução. Caso o processo não termine dentro desse período, ele é encerrado e o resultado é registrado como:
+
+```text
+TIMEOUT / NÃO CONCLUIU
+```
+
+Isso evita que o benchmark fique indefinidamente bloqueado durante o teste de `ALL` com um nó indisponível.
+
+---
+
+# 19. Resultados finais do experimento
+
+Os resultados abaixo correspondem à **execução automatizada final** do benchmark.
+
+Configuração comum:
+
+- Cassandra 0.7.0;
+- 3 nós;
+- RF=3;
+- YCSB 0.1.4;
+- Workload A;
 - 1000 registros;
 - 1000 operações;
-- 50% de leitura e 50% de atualização;
-- binding `com.yahoo.ycsb.db.CassandraClient10`;
-- níveis de consistência `ONE`, `QUORUM` e `ALL`;
-- cenários de operação normal, falha do Node 3 e recuperação do Node 3.
+- 50% leitura / 50% atualização;
+- ONE, QUORUM e ALL;
+- limite de 30 segundos no script automatizado.
 
-### 24.1 Operação normal
+## 19.1 Cenário normal
 
-Com os três nós ativos, os três níveis de consistência concluíram a execução sem erros registrados:
+Os três nós estavam ativos:
 
-| Consistência | Nós ativos | Runtime (ms) | Throughput (ops/s) | Erros | Resultado |
-| --- | ---: | ---: | ---: | ---: | --- |
-| ONE | 3/3 | 322 | 3105,59 | 0 | Concluído |
-| QUORUM | 3/3 | 454 | 2202,64 | 0 | Concluído |
-| ALL | 3/3 | 410 | 2439,02 | 0 | Concluído |
+```text
+3/3 nós
+```
 
-### 24.2 Falha do Node 3
-
-O Node 3 (`127.0.0.3`) foi interrompido e o cluster permaneceu com dois dos três nós ativos.
-
-| Consistência | Nós ativos | Runtime | Throughput (ops/s) | Erros | Resultado |
-| --- | ---: | ---: | ---: | ---: | --- |
-| ONE | 2/3 | 268 ms | 3731,34 | 0 | Concluído |
-| QUORUM | 2/3 | 369 ms | 2710,03 | 0 | Concluído |
-| ALL | 2/3 | > 5 min | — | — | Não concluiu no período observado; execução interrompida |
-
-No teste com `ALL`, a execução permaneceu aguardando por mais de cinco minutos e foi interrompida manualmente. Como a execução não chegou ao final, não foi atribuído throughput zero a esse teste.
-
-### 24.3 Recuperação
-
-O Node 3 foi reiniciado e o comando `nodetool ring` confirmou novamente os três nós como `Up` e `Normal`. Em seguida, os testes foram executados novamente:
-
-| Consistência | Nós ativos | Runtime (ms) | Throughput (ops/s) | Erros | Resultado |
-| --- | ---: | ---: | ---: | ---: | --- |
-| ONE | 3/3 | 381 | 2624,67 | 0 | Concluído |
-| QUORUM | 3/3 | 382 | 2617,80 | 0 | Concluído |
-| ALL | 3/3 | 484 | 2066,12 | 0 | Concluído |
-
-### 24.4 Observações
-
-Os resultados mostram que, durante a falha de um nó, `ONE` e `QUORUM` conseguiram concluir as operações com dois dos três nós ativos, enquanto `ALL` não concluiu dentro do período observado.
-
-Após a recuperação do Node 3, os três níveis de consistência voltaram a concluir as execuções.
-
-Esses resultados representam o comportamento observado nesta execução experimental. Eles não devem ser interpretados como uma prova isolada do teorema CAP nem como uma classificação fixa do Cassandra como CP ou AP. O objetivo é relacionar, de forma experimental, os requisitos de consistência e disponibilidade observados durante a falha e a recuperação.
-
-As diferenças de throughput entre as execuções também não devem ser utilizadas, isoladamente, para estabelecer que um nível de consistência é sempre mais rápido que outro, pois os valores dependem das condições específicas de cada execução.
+| Consistência | Nós ativos | Runtime (ms) | Throughput (ops/s) | Resultado |
+| --- | ---: | ---: | ---: | --- |
+| ONE | 3/3 | 201 | 4975,12 | Concluído |
+| QUORUM | 3/3 | 345 | 2898,55 | Concluído |
+| ALL | 3/3 | 317 | 3154,57 | Concluído |
 
 ---
 
-## 25. Estrutura final do experimento
+## 19.2 Cenário de falha
 
-| Cenário | Consistência | Nós ativos | Throughput (ops/s) | Latência/Runtime | Erros | Disponibilidade observada |
-| --- | --- | ---: | ---: | ---: | ---: | --- |
-| Normal | ONE | 3/3 | 3105,59 | 322 ms | 0 | Concluído |
-| Normal | QUORUM | 3/3 | 2202,64 | 454 ms | 0 | Concluído |
-| Normal | ALL | 3/3 | 2439,02 | 410 ms | 0 | Concluído |
-| Falha do Node 3 | ONE | 2/3 | 3731,34 | 268 ms | 0 | Concluído |
-| Falha do Node 3 | QUORUM | 2/3 | 2710,03 | 369 ms | 0 | Concluído |
-| Falha do Node 3 | ALL | 2/3 | — | > 5 min | — | Não concluiu no período observado |
-| Recuperação | ONE | 3/3 | 2624,67 | 381 ms | 0 | Concluído |
-| Recuperação | QUORUM | 3/3 | 2617,80 | 382 ms | 0 | Concluído |
-| Recuperação | ALL | 3/3 | 2066,12 | 484 ms | 0 | Concluído |
+O Node 3 foi desligado.
 
-### 25.1 Logs utilizados
+```text
+Node 1 = ativo
+Node 2 = ativo
+Node 3 = indisponível
 
-Os resultados foram registrados nos arquivos de log gerados durante as execuções:
+2/3 nós ativos
+```
 
-`ycsb-load-rf3.log`
+| Consistência | Nós ativos | Runtime | Throughput (ops/s) | Resultado |
+| --- | ---: | ---: | ---: | --- |
+| ONE | 2/3 | 198 ms | 5050,51 | Concluído |
+| QUORUM | 2/3 | 282 ms | 3546,10 | Concluído |
+| ALL | 2/3 | > 30 s | — | Não concluiu / timeout |
 
-`ycsb-one-rf3.log`
+O teste `ALL` não recebeu throughput zero. Como a execução não terminou dentro do limite definido pelo benchmark, o resultado foi registrado como **não concluído**.
 
-`ycsb-quorum-rf3.log`
+---
 
-`ycsb-all-rf3.log`
+## 19.3 Cenário de recuperação
 
-`ycsb-one-falha.log`
+O Node 3 foi reiniciado.
 
-`ycsb-quorum-falha.log`
+O `nodetool ring` voltou a apresentar os três nós como `Up` e `Normal`.
 
-`ycsb-all-falha.log`
+```text
+3/3 nós ativos
+```
 
-`ycsb-one-recuperacao.log`
+| Consistência | Nós ativos | Runtime (ms) | Throughput (ops/s) | Resultado |
+| --- | ---: | ---: | ---: | --- |
+| ONE | 3/3 | 215 | 4651,16 | Concluído |
+| QUORUM | 3/3 | 348 | 2873,56 | Concluído |
+| ALL | 3/3 | 377 | 2652,52 | Concluído |
 
-`ycsb-quorum-recuperacao.log`
+---
 
-O log do teste `ALL` durante a falha não possui resultado final de throughput porque a execução foi interrompida após permanecer aguardando por mais de cinco minutos.
+# 20. Tabela consolidada dos resultados finais
 
-### 25.2 Situação da etapa experimental
+| Cenário | Consistência | Nós ativos | Runtime | Throughput (ops/s) | Resultado |
+| --- | --- | ---: | ---: | ---: | --- |
+| Normal | ONE | 3/3 | 201 ms | 4975,12 | Concluído |
+| Normal | QUORUM | 3/3 | 345 ms | 2898,55 | Concluído |
+| Normal | ALL | 3/3 | 317 ms | 3154,57 | Concluído |
+| Falha Node 3 | ONE | 2/3 | 198 ms | 5050,51 | Concluído |
+| Falha Node 3 | QUORUM | 2/3 | 282 ms | 3546,10 | Concluído |
+| Falha Node 3 | ALL | 2/3 | > 30 s | — | Não concluiu |
+| Recuperação | ONE | 3/3 | 215 ms | 4651,16 | Concluído |
+| Recuperação | QUORUM | 3/3 | 348 ms | 2873,56 | Concluído |
+| Recuperação | ALL | 3/3 | 377 ms | 2652,52 | Concluído |
 
-A etapa experimental prevista neste documento foi concluída:
+---
 
-1. Cluster de três nós configurado.
-2. Keyspace `usertable` configurada com RF=3.
-3. Carga do YCSB executada.
-4. Testes com `ONE`, `QUORUM` e `ALL` executados em condição normal.
-5. Falha do Node 3 realizada.
-6. Testes durante a falha executados.
-7. Node 3 recuperado.
-8. Testes após a recuperação executados.
-9. Resultados registrados para análise em relação aos conceitos do teorema CAP.
+# 21. Interpretação dos resultados
+
+Com os três nós ativos, os níveis `ONE`, `QUORUM` e `ALL` conseguiram concluir as 1000 operações.
+
+Quando um dos três nós foi desligado:
+
+- `ONE` continuou concluindo as operações;
+- `QUORUM` continuou concluindo as operações;
+- `ALL` não conseguiu concluir dentro do limite de 30 segundos.
+
+Esse comportamento é compatível com os requisitos de confirmação de cada nível quando o fator de replicação é 3:
+
+```text
+RF = 3
+
+ONE     → precisa de 1 réplica
+QUORUM  → precisa de 2 réplicas
+ALL     → precisa das 3 réplicas
+```
+
+Com dois nós disponíveis:
+
+```text
+ONE     → atende
+QUORUM  → atende
+ALL     → não atende
+```
+
+Após a recuperação do Node 3, os três níveis voltaram a concluir as execuções.
+
+Os resultados demonstram experimentalmente a relação entre **requisitos de consistência e disponibilidade** em um sistema distribuído com replicação.
+
+Eles não devem ser interpretados como uma prova isolada do teorema CAP. Também não é adequado utilizar os valores de throughput de uma única execução para afirmar que um nível de consistência é sempre mais rápido que outro.
+
+---
+
+# 22. Relação com o CAP
+
+O experimento foi desenvolvido para observar empiricamente aspectos relacionados aos elementos do CAP, principalmente o comportamento de **consistência e disponibilidade diante da indisponibilidade de um nó**.
+
+A relação observada pode ser resumida como:
+
+```text
+                    Cassandra
+                       │
+          ┌────────────┴────────────┐
+          │                         │
+   Consistência                 Disponibilidade
+          │                         │
+   ONE / QUORUM / ALL       Nó indisponível
+          │                         │
+          └────────────┬────────────┘
+                       │
+             comportamento observado
+```
+
+O Cassandra permite ajustar o nível de consistência por operação. Assim, o experimento não deve ser descrito simplesmente como uma escolha entre "C", "A" ou "P" feita através dos comandos ONE, QUORUM e ALL.
+
+O que foi observado foi que, com RF=3 e um nó indisponível, níveis que exigem somente uma parte das réplicas conseguiram continuar executando, enquanto `ALL`, que exige todas as réplicas, deixou de concluir as operações.
+
+---
+
+# 23. Conclusão experimental
+
+O experimento confirmou, no ambiente configurado, que:
+
+1. o cluster de três nós funcionou com RF=3;
+2. os três níveis de consistência foram executados em condição normal;
+3. com um nó indisponível, `ONE` e `QUORUM` continuaram disponíveis para as operações testadas;
+4. com um nó indisponível, `ALL` não concluiu dentro do limite de 30 segundos;
+5. após a recuperação do nó, `ONE`, `QUORUM` e `ALL` voltaram a concluir;
+6. o nível de consistência escolhido altera o número de réplicas necessárias para confirmar uma operação;
+7. o comportamento observado permite relacionar experimentalmente consistência e disponibilidade em um sistema distribuído.
+
+---
+
+# 24. Estrutura dos arquivos relevantes
+
+Os principais arquivos adicionados ou utilizados no experimento são:
+
+```text
+CONFIGURACAO.md
+benchmark.ps1
+pom.xml
+workloads/
+└── workloada
+```
+
+Os artefatos de compilação, dados do Cassandra e logs locais não devem ser versionados.
+
+O `.gitignore` está configurado para ignorar:
+
+- arquivos `target/`;
+- JARs e classes gerados;
+- logs;
+- dados do Cassandra;
+- diretórios de instalação;
+- resultados locais de benchmark;
+- arquivos temporários.
+
+---
+
+# 25. Estado final
+
+A etapa experimental foi concluída:
+
+- [x] YCSB configurado;
+- [x] Cassandra 0.7.0 configurado;
+- [x] cluster com 3 nós criado;
+- [x] RF=3 configurado;
+- [x] Workload A configurado;
+- [x] benchmark automatizado criado;
+- [x] cenário normal executado;
+- [x] falha de um nó executada;
+- [x] cenário de falha executado;
+- [x] nó recuperado;
+- [x] cenário de recuperação executado;
+- [x] resultados finais registrados;
+- [x] relação dos resultados com consistência e disponibilidade documentada.
+
+O repositório contém o código e a documentação necessários para reproduzir a configuração e compreender o experimento realizado.
