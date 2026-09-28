@@ -1,10 +1,120 @@
-# ignore compiled byte code
-target
+# ============================================================
+# Java / Maven - arquivos gerados
+# ============================================================
 
-# ignore output files from testing
-output*
+target/
+*.class
+*.jar
+*.war
+*.ear
 
-# ignore standard eclipse
-.project
+.mvn/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+release.properties
+dependency-reduced-pom.xml
+
+# ============================================================
+# IDEs
+# ============================================================
+
+.idea/
+*.iml
+.vscode/
 .classpath
-.settings
+.project
+.settings/
+
+# ============================================================
+# Logs
+# ============================================================
+
+*.log
+*.out
+logs/
+log/
+
+# ============================================================
+# Cassandra - dados gerados
+# ============================================================
+
+data/
+commitlog/
+saved_caches/
+
+node1/data/
+node1/commitlog/
+node1/saved_caches/
+
+node2/data/
+node2/commitlog/
+node2/saved_caches/
+
+node3/data/
+node3/commitlog/
+node3/saved_caches/
+
+# Cassandra temporários
+*.pid
+*.tmp
+*.lck
+
+# Snapshots e backups
+snapshots/
+backups/
+
+# ============================================================
+# Cassandra - arquivos locais
+# ============================================================
+
+conf/cassandra.yaml.original
+
+# ============================================================
+# YCSB - resultados dos benchmarks
+# ============================================================
+
+ycsb-*.log
+ycsb-*.txt
+results/
+resultados/
+benchmark/
+benchmarks/
+
+# ============================================================
+# Instalações locais
+#
+# Estas pastas não devem ser versionadas caso sejam copiadas
+# para dentro do repositório.
+# ============================================================
+
+apache-maven-*/
+apache-cassandra-*/
+
+jdk*/
+jre*/
+
+# ============================================================
+# Arquivos de instalação / compactados
+# ============================================================
+
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+# ============================================================
+# Sistema operacional
+# ============================================================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============================================================
+# Arquivos temporários de editores
+# ============================================================
+
+*.swp
+*.swo
+*~
