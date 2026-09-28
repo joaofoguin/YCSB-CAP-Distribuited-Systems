@@ -6,8 +6,8 @@ Este documento registra a configuração realizada para executar experimentos
 do YCSB sobre um cluster Cassandra 0.7.0 no Windows 11.
 
 O experimento tem como objetivo analisar o comportamento do sistema distribuído
-sob diferentes níveis de consistência e, posteriormente, sob situações de
-falha/particionamento.
+sob diferentes níveis de consistência, em condições normais, durante falha de um nó
+e após a recuperação do cluster.
 
 Os níveis de consistência que serão utilizados são:
 
@@ -485,7 +485,7 @@ update keyspace usertable with replication_factor=3;
 
 A alteração foi aceita pelo Cassandra.
 
-A redistribuição dos dados existentes ainda deverá ser verificada antes da execução definitiva dos experimentos.
+Após a alteração do fator de replicação, os dados foram carregados novamente pelo YCSB para que os experimentos principais fossem realizados com fator de replicação 3.
 
 ---
 
@@ -616,65 +616,112 @@ Os testes do experimento principal serão realizados posteriormente com o cluste
 
 ---
 
-## 24. Próximas etapas
+## 24. Resultados experimentais
 
-### Etapa 1
+Os experimentos principais foram realizados com:
 
-Verificar a replicação da `usertable` nos três nós.
+- cluster Cassandra com 3 nós;
+- fator de replicação (RF) igual a 3;
+- workload A do YCSB;
+- 1000 registros;
+- 1000 operações;
+- 50% de leitura e 50% de atualização;
+- binding `com.yahoo.ycsb.db.CassandraClient10`;
+- níveis de consistência `ONE`, `QUORUM` e `ALL`;
+- cenários de operação normal, falha do Node 3 e recuperação do Node 3.
 
-### Etapa 2
+### 24.1 Operação normal
 
-Executar o `load` do YCSB com o cluster de três nós.
+Com os três nós ativos, os três níveis de consistência concluíram a execução sem erros registrados:
 
-### Etapa 3
+| Consistência | Nós ativos | Runtime (ms) | Throughput (ops/s) | Erros | Resultado |
+| --- | ---: | ---: | ---: | ---: | --- |
+| ONE | 3/3 | 322 | 3105,59 | 0 | Concluído |
+| QUORUM | 3/3 | 454 | 2202,64 | 0 | Concluído |
+| ALL | 3/3 | 410 | 2439,02 | 0 | Concluído |
 
-Executar workload com:
+### 24.2 Falha do Node 3
 
-- ONE
-- QUORUM
-- ALL
+O Node 3 (`127.0.0.3`) foi interrompido e o cluster permaneceu com dois dos três nós ativos.
 
-### Etapa 4
+| Consistência | Nós ativos | Runtime | Throughput (ops/s) | Erros | Resultado |
+| --- | ---: | ---: | ---: | ---: | --- |
+| ONE | 2/3 | 268 ms | 3731,34 | 0 | Concluído |
+| QUORUM | 2/3 | 369 ms | 2710,03 | 0 | Concluído |
+| ALL | 2/3 | > 5 min | — | — | Não concluiu no período observado; execução interrompida |
 
-Registrar:
+No teste com `ALL`, a execução permaneceu aguardando por mais de cinco minutos e foi interrompida manualmente. Como a execução não chegou ao final, não foi atribuído throughput zero a esse teste.
 
-- Throughput
-- Latência
-- Erros
-- Disponibilidade
+### 24.3 Recuperação
 
-### Etapa 5
+O Node 3 foi reiniciado e o comando `nodetool ring` confirmou novamente os três nós como `Up` e `Normal`. Em seguida, os testes foram executados novamente:
 
-Introduzir uma falha/partição entre nós.
+| Consistência | Nós ativos | Runtime (ms) | Throughput (ops/s) | Erros | Resultado |
+| --- | ---: | ---: | ---: | ---: | --- |
+| ONE | 3/3 | 381 | 2624,67 | 0 | Concluído |
+| QUORUM | 3/3 | 382 | 2617,80 | 0 | Concluído |
+| ALL | 3/3 | 484 | 2066,12 | 0 | Concluído |
 
-### Etapa 6
+### 24.4 Observações
 
-Executar novamente os testes.
+Os resultados mostram que, durante a falha de um nó, `ONE` e `QUORUM` conseguiram concluir as operações com dois dos três nós ativos, enquanto `ALL` não concluiu dentro do período observado.
 
-### Etapa 7
+Após a recuperação do Node 3, os três níveis de consistência voltaram a concluir as execuções.
 
-Restabelecer o cluster.
+Esses resultados representam o comportamento observado nesta execução experimental. Eles não devem ser interpretados como uma prova isolada do teorema CAP nem como uma classificação fixa do Cassandra como CP ou AP. O objetivo é relacionar, de forma experimental, os requisitos de consistência e disponibilidade observados durante a falha e a recuperação.
 
-### Etapa 8
-
-Medir o comportamento de recuperação.
-
-### Etapa 9
-
-Comparar os resultados e relacioná-los aos conceitos do teorema CAP.
+As diferenças de throughput entre as execuções também não devem ser utilizadas, isoladamente, para estabelecer que um nível de consistência é sempre mais rápido que outro, pois os valores dependem das condições específicas de cada execução.
 
 ---
 
-## 25. Estrutura final esperada do experimento
+## 25. Estrutura final do experimento
 
-| Cenário | Consistência | Nós ativos | Throughput | Latência | Erros | Disponibilidade |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Normal | ONE | 3 | - | - | - | - |
-| Normal | QUORUM | 3 | - | - | - | - |
-| Normal | ALL | 3 | - | - | - | - |
-| Falha/partição | ONE | - | - | - | - | - |
-| Falha/partição | QUORUM | - | - | - | - | - |
-| Falha/partição | ALL | - | - | - | - | - |
-| Recuperação | ONE | 3 | - | - | - | - |
-| Recuperação | QUORUM | 3 | - | - | - | - |
-| Recuperação | ALL | 3 | - | - | - | - |
+| Cenário | Consistência | Nós ativos | Throughput (ops/s) | Latência/Runtime | Erros | Disponibilidade observada |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| Normal | ONE | 3/3 | 3105,59 | 322 ms | 0 | Concluído |
+| Normal | QUORUM | 3/3 | 2202,64 | 454 ms | 0 | Concluído |
+| Normal | ALL | 3/3 | 2439,02 | 410 ms | 0 | Concluído |
+| Falha do Node 3 | ONE | 2/3 | 3731,34 | 268 ms | 0 | Concluído |
+| Falha do Node 3 | QUORUM | 2/3 | 2710,03 | 369 ms | 0 | Concluído |
+| Falha do Node 3 | ALL | 2/3 | — | > 5 min | — | Não concluiu no período observado |
+| Recuperação | ONE | 3/3 | 2624,67 | 381 ms | 0 | Concluído |
+| Recuperação | QUORUM | 3/3 | 2617,80 | 382 ms | 0 | Concluído |
+| Recuperação | ALL | 3/3 | 2066,12 | 484 ms | 0 | Concluído |
+
+### 25.1 Logs utilizados
+
+Os resultados foram registrados nos arquivos de log gerados durante as execuções:
+
+`ycsb-load-rf3.log`
+
+`ycsb-one-rf3.log`
+
+`ycsb-quorum-rf3.log`
+
+`ycsb-all-rf3.log`
+
+`ycsb-one-falha.log`
+
+`ycsb-quorum-falha.log`
+
+`ycsb-all-falha.log`
+
+`ycsb-one-recuperacao.log`
+
+`ycsb-quorum-recuperacao.log`
+
+O log do teste `ALL` durante a falha não possui resultado final de throughput porque a execução foi interrompida após permanecer aguardando por mais de cinco minutos.
+
+### 25.2 Situação da etapa experimental
+
+A etapa experimental prevista neste documento foi concluída:
+
+1. Cluster de três nós configurado.
+2. Keyspace `usertable` configurada com RF=3.
+3. Carga do YCSB executada.
+4. Testes com `ONE`, `QUORUM` e `ALL` executados em condição normal.
+5. Falha do Node 3 realizada.
+6. Testes durante a falha executados.
+7. Node 3 recuperado.
+8. Testes após a recuperação executados.
+9. Resultados registrados para análise em relação aos conceitos do teorema CAP.
