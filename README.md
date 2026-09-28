@@ -191,6 +191,8 @@ QUORUM  → 2 réplicas necessárias → continua
 ALL     → 3 réplicas necessárias → não conclui
 ```
 
+![Throughput por nível de consistência](/assets/Throughput%20por%20nível%20de%20consistência.png)
+
 Portanto, com um dos três nós indisponível, **ONE e QUORUM continuaram executando as operações testadas**, enquanto **ALL não conseguiu concluir dentro de 30 segundos**.
 
 Após a recuperação do Node 3, os três níveis voltaram a concluir as operações.
